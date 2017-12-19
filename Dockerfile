@@ -3,6 +3,7 @@ ARG FINAL_BASE_IMAGE=nevstokes/busybox
 
 FROM nevstokes/php-src:${PHP_VERSION} AS src
 
+
 FROM alpine:3.6 AS build
 
 COPY github-releases.xsl /
@@ -70,17 +71,17 @@ RUN export CFLAGS="-fstack-protector-strong -fpic -fpie -Os" \
         --without-pear \
         --without-sqlite3 \
     \
-    && for REPO in krakjoe/apcu igbinary/igbinary phpredis/phpredis \
+    && for REPO in igbinary/igbinary krakjoe/apcu php-ds/extension phpredis/phpredis \
     ; do \
-        export EXT_DIR="ext/`basename $REPO`" \
+        export EXT_DIR="ext/`basename ${REPO}`" \
         && mkdir -p ${EXT_DIR} \
         \
-        && export VERSION=`wget -q https://github.com/${REPO}/releases.atom -O - | xsltproc /github-releases.xsl - | awk -F/ '{ print $NF }' | grep -E '[0-9]+(\.[0-9]+){2}$' | sort -t. -r -k1,1 -k2,2 -k3,3 | head -1` \
-        && wget -qO- https://github.com/${REPO}/archive/${VERSION}.tar.gz | tar xz -C ${EXT_DIR} --strip-components=1; \
+        && export TAG=`wget -q https://github.com/${REPO}/releases.atom -O - | xsltproc /github-releases.xsl - | awk -F/ '{ print $NF; }' > versions.$$ && grep -E "^(v|release-)?\`sed -E 's/^(v|release-)//' versions.$$ | grep -E '^[0-9]+(\.[0-9]+){1,2}$' | sort -rg -t. -k1,1 -k2,2 -k3,3 | head -1\`$" versions.$$ && rm versions.$$` \
+        && wget -qO- https://github.com/${REPO}/archive/${TAG}.tar.gz | tar xz -C ${EXT_DIR} --strip-components=1; \
     done \
     \
     && rm configure && ./buildconf --force \
-    && ./config.nice --enable-apcu --enable-igbinary --enable-redis --enable-redis-igbinary \
+    && ./config.nice --enable-apcu --enable-ds --enable-igbinary --enable-redis --enable-redis-igbinary \
     \
     && make -j "$(getconf _NPROCESSORS_ONLN)" \
     && make install \
@@ -121,6 +122,10 @@ RUN rm /lib/libc.musl-x86_64.so.1 \
 
 
 FROM ${FINAL_BASE_IMAGE}
+
+ARG BUILD_DATE
+ARG VCS_REF
+ARG VCS_URL
 
 ENV PHP_INI_DIR=/usr/local/etc/php
 
