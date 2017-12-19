@@ -6,9 +6,6 @@
                 xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 >
 
-    <!-- Usually interested in the release listed first (i.e. the latest version) -->
-    <xsl:param name="version_index">1</xsl:param>
-
     <xsl:output method="text"/>
 
     <xsl:template match="/atom:feed">
